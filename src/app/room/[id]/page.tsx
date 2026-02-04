@@ -16,7 +16,6 @@ export default function GameRoom() {
   const [feedback, setFeedback] = useState<'correct' | 'error' | null>(null);
   const [players, setPlayers] = useState([{ id: 1, lives: 3 }, { id: 2, lives: 3 }]);
   
-  // New State for Rules
   const [gameConfig, setGameConfig] = useState({
     maxLives: 3,
     duration: 10,
@@ -24,6 +23,7 @@ export default function GameRoom() {
     isStarted: false
   });
 
+  // 1. Sync with Supabase
   useEffect(() => {
     if (!roomId) return;
     const fetchInitial = async () => {
@@ -44,17 +44,21 @@ export default function GameRoom() {
     setPrompt(data.prompt);
     setTurn(data.current_turn);
     setUsedWords(data.used_words || []);
-    setPlayers([{ id: 1, lives: data.p1_lives }, { id: 2, lives: data.p2_lives }]);
+    setPlayers([
+      { id: 1, lives: data.p1_lives }, 
+      { id: 2, lives: data.p2_lives }
+    ]);
     setGameConfig({
       maxLives: data.max_lives,
       duration: data.bomb_duration,
       difficulty: data.difficulty,
       isStarted: data.is_started
     });
-    setTimer(data.bomb_duration); // Sync timer to the custom duration
+    // Important: Only reset timer locally when a turn changes or game starts
+    if (data.is_started) setTimer(data.bomb_duration);
   };
 
-  // Timer Authority
+  // 2. Timer Authority
   useEffect(() => {
     if (!gameConfig.isStarted || myRole !== turn || players[0].lives <= 0 || players[1].lives <= 0) return;
 
@@ -77,7 +81,7 @@ export default function GameRoom() {
   };
 
   const updateConfig = async (key: string, value: any) => {
-    if (myRole !== 1) return; // Only P1 can change rules
+    if (myRole !== 1) return; 
     await supabase.from('rooms').update({ [key]: value }).eq('id', roomId);
   };
 
@@ -86,7 +90,8 @@ export default function GameRoom() {
       is_started: true,
       p1_lives: gameConfig.maxLives,
       p2_lives: gameConfig.maxLives,
-      prompt: getPromptByDifficulty(gameConfig.difficulty)
+      prompt: getPromptByDifficulty(gameConfig.difficulty),
+      used_words: []
     }).eq('id', roomId);
   };
 
@@ -109,8 +114,9 @@ export default function GameRoom() {
     setTimeout(() => setFeedback(null), 400);
   };
 
-  // --- UI RENDERING ---
+  // --- UI SCREENS ---
 
+  // 1. Role Selection
   if (!myRole) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
       <h2 className="text-white text-2xl font-bold tracking-tighter">JOIN AS:</h2>
@@ -121,13 +127,12 @@ export default function GameRoom() {
     </div>
   );
 
-  // LOBBY / RULES SCREEN
+  // 2. Lobby Screen
   if (!gameConfig.isStarted) {
     return (
       <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center justify-center">
         <div className="max-w-md w-full bg-zinc-900/50 p-8 rounded-3xl border border-zinc-800 backdrop-blur-xl">
           <h2 className="text-3xl font-black mb-6 italic tracking-tighter">ROOM SETTINGS</h2>
-          
           <div className="space-y-6">
             <div>
               <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Lives: {gameConfig.maxLives}</label>
@@ -137,7 +142,6 @@ export default function GameRoom() {
                 className="w-full accent-red-600 mt-2" 
               />
             </div>
-
             <div>
               <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Bomb Timer: {gameConfig.duration}s</label>
               <input type="range" min="5" max="30" step="5" value={gameConfig.duration} 
@@ -146,35 +150,24 @@ export default function GameRoom() {
                 className="w-full accent-red-600 mt-2" 
               />
             </div>
-
             <div className="flex gap-2">
               {['easy', 'medium', 'hard'].map((d) => (
-                <button 
-                  key={d}
-                  onClick={() => updateConfig('difficulty', d)}
-                  disabled={myRole !== 1}
+                <button key={d} onClick={() => updateConfig('difficulty', d)} disabled={myRole !== 1}
                   className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${gameConfig.difficulty === d ? 'bg-white text-black border-white' : 'border-zinc-800 text-zinc-500'}`}
-                >
-                  {d}
-                </button>
+                > {d} </button>
               ))}
             </div>
-
             <div className="pt-6 border-t border-zinc-800">
               <p className="text-[10px] text-zinc-500 font-bold uppercase mb-2">Invite Code</p>
               <div className="flex bg-black p-3 rounded-xl border border-zinc-800 items-center justify-between">
                 <code className="text-red-500 font-mono text-xl">{roomId}</code>
-                <button onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  alert("Link copied!");
-                }} className="text-[10px] bg-zinc-800 px-3 py-1 rounded-md">COPY LINK</button>
+                <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }} className="text-[10px] bg-zinc-800 px-3 py-1 rounded-md uppercase font-bold">Copy Link</button>
               </div>
             </div>
-
             {myRole === 1 ? (
               <button onClick={startGame} className="w-full py-4 bg-red-600 rounded-xl font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-lg shadow-red-600/20">Start Game</button>
             ) : (
-              <p className="text-center text-zinc-500 italic text-sm animate-pulse">Waiting for host to start...</p>
+              <p className="text-center text-zinc-500 italic text-sm animate-pulse">Waiting for host...</p>
             )}
           </div>
         </div>
@@ -182,11 +175,65 @@ export default function GameRoom() {
     );
   }
 
-  // GAME SCREEN (Keep your existing return UI here)
+  // 3. Active Game UI
+  const isGameOver = players[0].lives <= 0 || players[1].lives <= 0;
+  const winner = players[0].lives > 0 ? 1 : 2;
+
   return (
     <main className="min-h-screen bg-black text-white flex flex-col items-center justify-between py-16">
-      {/* Existing HUD and Bomb UI... */}
-      {/* Ensure to use gameConfig.maxLives for the heart display if you want it dynamic */}
+      <div className="w-full max-w-xl flex justify-between px-8">
+        {[0, 1].map(i => (
+          <div key={i} className={turn === i+1 ? "opacity-100" : "opacity-30"}>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase">P{i+1} {myRole === i+1 && "(YOU)"}</p>
+            <div className="flex gap-1">
+              {[...Array(gameConfig.maxLives)].map((_, j) => (
+                <div key={j} className={`w-6 h-2 rounded-full ${j < players[i].lives ? 'bg-red-600 shadow-[0_0_10px_red]' : 'bg-zinc-800'}`} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col items-center">
+        {isGameOver ? (
+          <div className="text-center">
+            <h2 className="text-5xl font-black italic tracking-tighter text-red-600 mb-4 animate-bounce">PLAYER {winner} WINS!</h2>
+            {myRole === 1 && (
+              <button onClick={() => updateConfig('is_started', false)} className="px-8 py-3 bg-white text-black font-bold rounded-full uppercase text-xs tracking-widest">Back to Lobby</button>
+            )}
+          </div>
+        ) : (
+          <>
+            <motion.div 
+              animate={timer <= 3 ? { x: [-2, 2, -2, 2, 0] } : {}}
+              className={`w-64 h-64 rounded-full border-8 flex flex-col items-center justify-center transition-all 
+                ${feedback === 'correct' ? 'border-green-500' : feedback === 'error' ? 'border-red-500' : 'border-zinc-800'}`}
+            >
+              <span className="text-[10px] text-zinc-500 font-bold tracking-[0.3em]">CONTAINS</span>
+              <h1 className="text-7xl font-black">{prompt}</h1>
+              <p className={`text-2xl font-mono ${timer <= 3 ? 'text-red-500' : 'text-yellow-500'}`}>{timer}s</p>
+            </motion.div>
+
+            <form onSubmit={handleSubmit} className="mt-12">
+              <input 
+                autoFocus value={input} 
+                onChange={e => setInput(e.target.value)}
+                disabled={myRole !== turn}
+                className={`bg-transparent border-b-4 border-zinc-900 text-5xl font-black text-center uppercase focus:outline-none focus:border-yellow-500 w-80 transition-opacity ${myRole !== turn ? 'opacity-20' : 'opacity-100'}`}
+                placeholder={myRole === turn ? "..." : "WAIT"}
+              />
+            </form>
+          </>
+        )}
+      </div>
+      
+      <div className="flex gap-4 text-zinc-600 uppercase text-xs font-bold overflow-hidden h-4">
+        <AnimatePresence>
+          {usedWords.slice(0, 5).map((w, i) => (
+            <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={w}>{w}</motion.span>
+          ))}
+        </AnimatePresence>
+      </div>
     </main>
   );
 }
