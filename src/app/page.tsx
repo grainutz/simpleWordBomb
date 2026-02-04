@@ -7,20 +7,19 @@ export default function Home() {
   const router = useRouter();
 
   const createRoom = async () => {
-  // Use the built-in browser method to generate a valid UUID
-  const newRoomId = crypto.randomUUID(); 
-  
-  const { error } = await supabase.from('rooms').insert({
-    id: newRoomId, // This will now be accepted by Postgres
-    prompt: getRandomPrompt(),
-    current_turn: 1,
-    p1_lives: 3,
-    p2_lives: 3,
-    used_words: []
-  });
+    const newRoomId = Math.random().toString(36).substring(2, 9);
+    const { error } = await supabase.from('rooms').insert({
+      id: newRoomId,
+      prompt: getRandomPrompt(),
+      current_turn: 1,
+      p1_lives: 3,
+      p2_lives: 3,
+      used_words: []
+    });
 
-  if (!error) router.push(`/room/${newRoomId}`);
-};
+    if (!error) router.push(`/room/${newRoomId}`);
+    else console.error("Error creating room:", error);
+  };
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white font-sans">
