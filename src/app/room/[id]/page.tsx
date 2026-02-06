@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { isValidWord, getPromptByDifficulty } from '@/lib/gameUtils';
@@ -8,6 +8,13 @@ import { supabase } from '@/lib/supabase';
 export default function GameRoom() {
   const { id: roomId } = useParams();
   const [myRole, setMyRole] = useState<number | null>(null);
+  
+  // --- NEW REAL-TIME STATES ---
+  const [remoteInput, setRemoteInput] = useState(""); 
+  const [presence, setPresence] = useState({ p1: false, p2: false });
+  const channelRef = useRef<any>(null);
+
+  // --- EXISTING STATES ---
   const [input, setInput] = useState("");
   const [prompt, setPrompt] = useState("");
   const [timer, setTimer] = useState(10);
@@ -23,52 +30,106 @@ export default function GameRoom() {
     isStarted: false
   });
 
-  // 1. Sync with Supabase
+  // 1. Unified Real-Time Effect (Broadcast, Presence, and DB Changes)
   useEffect(() => {
     if (!roomId) return;
+
+    // Fetch initial state from DB
     const fetchInitial = async () => {
       const { data } = await supabase.from('rooms').select('*').eq('id', roomId).single();
       if (data) syncState(data);
     };
     fetchInitial();
 
-    const channel = supabase.channel(`room:${roomId}`)
+    // Create Channel for Broadcast and Presence
+    const channel = supabase.channel(`room:${roomId}`, {
+      config: { presence: { key: myRole?.toString() || 'spectator' } }
+    });
+    channelRef.current = channel;
+
+    channel
+      // A. Listen for DB updates (turn changes, prompt changes)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, 
-      (payload) => syncState(payload.new))
-      .subscribe();
+        (payload) => syncState(payload.new))
+      
+      // B. Listen for Live Typing (Broadcast)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.role !== myRole) setRemoteInput(payload.text);
+      })
+
+      // C. Listen for Timer Sync (Broadcast)
+      .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
+        // Only sync if it's NOT my turn (I follow the master clock of the active player)
+        if (myRole !== turn) setTimer(payload.timer);
+      })
+
+      // D. Listen for Presence (Join/Leave)
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        setPresence({
+          p1: !!state['1'],
+          p2: !!state['2']
+        });
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED' && myRole) {
+          // Track my presence as "1" or "2"
+          await channel.track({ online_at: new Date().toISOString() });
+        }
+      });
 
     return () => { supabase.removeChannel(channel); };
-  }, [roomId]);
+  }, [roomId, myRole, turn]);
 
   const syncState = (data: any) => {
     setPrompt(data.prompt);
     setTurn(data.current_turn);
     setUsedWords(data.used_words || []);
-    setPlayers([
-      { id: 1, lives: data.p1_lives }, 
-      { id: 2, lives: data.p2_lives }
-    ]);
+    setPlayers([{ id: 1, lives: data.p1_lives }, { id: 2, lives: data.p2_lives }]);
     setGameConfig({
       maxLives: data.max_lives,
       duration: data.bomb_duration,
       difficulty: data.difficulty,
       isStarted: data.is_started
     });
-    // Important: Only reset timer locally when a turn changes or game starts
     if (data.is_started) setTimer(data.bomb_duration);
+    setRemoteInput(""); // Clear typing preview on turn change
   };
 
-  // 2. Timer Authority
+  // 2. Timer Authority + Timer Broadcast
   useEffect(() => {
     if (!gameConfig.isStarted || myRole !== turn || players[0].lives <= 0 || players[1].lives <= 0) return;
 
     if (timer > 0) {
-      const t = setTimeout(() => setTimer(timer - 1), 1000);
+      const t = setTimeout(() => {
+        const nextTime = timer - 1;
+        setTimer(nextTime);
+        
+        // Broadcast my local timer to the opponent
+        channelRef.current?.send({
+          type: 'broadcast',
+          event: 'timer_sync',
+          payload: { timer: nextTime }
+        });
+      }, 1000);
       return () => clearTimeout(t);
     } else {
       handleTimeout();
     }
   }, [timer, turn, myRole, gameConfig.isStarted]);
+
+  // 3. Handle My Typing + Broadcast
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+    
+    // Send keystrokes to the other player
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { text: val, role: myRole }
+    });
+  };
 
   const handleTimeout = async () => {
     const isP1 = turn === 1;
@@ -108,18 +169,18 @@ export default function GameRoom() {
         used_words: [cleanInput, ...usedWords],
       }).eq('id', roomId);
       setInput("");
+      channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { text: "", role: myRole } });
     } else {
       setFeedback('error');
     }
     setTimeout(() => setFeedback(null), 400);
   };
 
-  // --- UI SCREENS ---
+  // --- UI RENDER LOGIC ---
 
-  // 1. Role Selection
   if (!myRole) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
-      <h2 className="text-white text-2xl font-bold tracking-tighter">JOIN AS:</h2>
+      <h2 className="text-white text-2xl font-bold tracking-tighter italic">CHOOSE YOUR SIDE</h2>
       <div className="flex gap-4">
         <button onClick={() => setMyRole(1)} className="px-8 py-4 bg-zinc-900 text-white border border-zinc-700 rounded-lg hover:bg-white hover:text-black transition-all">Player 1 (Host)</button>
         <button onClick={() => setMyRole(2)} className="px-8 py-4 bg-zinc-900 text-white border border-zinc-700 rounded-lg hover:bg-white hover:text-black transition-all">Player 2</button>
@@ -127,47 +188,43 @@ export default function GameRoom() {
     </div>
   );
 
-  // 2. Lobby Screen
   if (!gameConfig.isStarted) {
     return (
       <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center justify-center">
-        <div className="max-w-md w-full bg-zinc-900/50 p-8 rounded-3xl border border-zinc-800 backdrop-blur-xl">
+        <div className="max-w-md w-full bg-zinc-900/50 p-8 rounded-3xl border border-zinc-800 backdrop-blur-xl relative">
+          {/* Presence Indicator in Lobby */}
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex gap-2">
+            {[1, 2].map(n => (
+              <div key={n} className={`w-3 h-3 rounded-full border-2 border-black ${presence[`p${n}` as keyof typeof presence] ? 'bg-green-500 shadow-[0_0_10px_green]' : 'bg-zinc-800'}`} />
+            ))}
+          </div>
+
           <h2 className="text-3xl font-black mb-6 italic tracking-tighter">ROOM SETTINGS</h2>
           <div className="space-y-6">
             <div>
               <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Lives: {gameConfig.maxLives}</label>
-              <input type="range" min="1" max="5" value={gameConfig.maxLives} 
-                disabled={myRole !== 1}
-                onChange={(e) => updateConfig('max_lives', parseInt(e.target.value))}
-                className="w-full accent-red-600 mt-2" 
-              />
+              <input type="range" min="1" max="5" value={gameConfig.maxLives} disabled={myRole !== 1} onChange={(e) => updateConfig('max_lives', parseInt(e.target.value))} className="w-full accent-red-600 mt-2" />
             </div>
             <div>
               <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Bomb Timer: {gameConfig.duration}s</label>
-              <input type="range" min="5" max="30" step="5" value={gameConfig.duration} 
-                disabled={myRole !== 1}
-                onChange={(e) => updateConfig('bomb_duration', parseInt(e.target.value))}
-                className="w-full accent-red-600 mt-2" 
-              />
+              <input type="range" min="5" max="30" step="5" value={gameConfig.duration} disabled={myRole !== 1} onChange={(e) => updateConfig('bomb_duration', parseInt(e.target.value))} className="w-full accent-red-600 mt-2" />
             </div>
             <div className="flex gap-2">
               {['easy', 'medium', 'hard'].map((d) => (
-                <button key={d} onClick={() => updateConfig('difficulty', d)} disabled={myRole !== 1}
-                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${gameConfig.difficulty === d ? 'bg-white text-black border-white' : 'border-zinc-800 text-zinc-500'}`}
-                > {d} </button>
+                <button key={d} onClick={() => updateConfig('difficulty', d)} disabled={myRole !== 1} className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase border transition-all ${gameConfig.difficulty === d ? 'bg-white text-black border-white' : 'border-zinc-800 text-zinc-500'}`}>{d}</button>
               ))}
             </div>
             <div className="pt-6 border-t border-zinc-800">
-              <p className="text-[10px] text-zinc-500 font-bold uppercase mb-2">Invite Code</p>
+              <p className="text-[10px] text-zinc-500 font-bold uppercase mb-2 italic">Waiting for Opponent...</p>
               <div className="flex bg-black p-3 rounded-xl border border-zinc-800 items-center justify-between">
                 <code className="text-red-500 font-mono text-xl">{roomId}</code>
-                <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }} className="text-[10px] bg-zinc-800 px-3 py-1 rounded-md uppercase font-bold">Copy Link</button>
+                <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Copied!"); }} className="text-[10px] bg-zinc-800 px-3 py-1 rounded-md uppercase font-bold">Copy Link</button>
               </div>
             </div>
             {myRole === 1 ? (
               <button onClick={startGame} className="w-full py-4 bg-red-600 rounded-xl font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-lg shadow-red-600/20">Start Game</button>
             ) : (
-              <p className="text-center text-zinc-500 italic text-sm animate-pulse">Waiting for host...</p>
+              <p className="text-center text-zinc-500 italic text-sm animate-pulse">Wait for host to begin...</p>
             )}
           </div>
         </div>
@@ -175,64 +232,82 @@ export default function GameRoom() {
     );
   }
 
-  // 3. Active Game UI
   const isGameOver = players[0].lives <= 0 || players[1].lives <= 0;
   const winner = players[0].lives > 0 ? 1 : 2;
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-between py-16">
+    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-between py-16 px-4">
+      {/* HUD with Live Presence */}
       <div className="w-full max-w-xl flex justify-between px-8">
-        {[0, 1].map(i => (
-          <div key={i} className={turn === i+1 ? "opacity-100" : "opacity-30"}>
-            <p className="text-[10px] font-bold text-zinc-500 uppercase">P{i+1} {myRole === i+1 && "(YOU)"}</p>
+        {[1, 2].map(num => (
+          <div key={num} className={turn === num ? "opacity-100" : "opacity-30 transition-opacity"}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className={`w-2 h-2 rounded-full ${presence[`p${num}` as keyof typeof presence] ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-900'}`} />
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">P{num} {myRole === num && "(YOU)"}</p>
+            </div>
             <div className="flex gap-1">
               {[...Array(gameConfig.maxLives)].map((_, j) => (
-                <div key={j} className={`w-6 h-2 rounded-full ${j < players[i].lives ? 'bg-red-600 shadow-[0_0_10px_red]' : 'bg-zinc-800'}`} />
+                <div key={j} className={`w-6 h-2 rounded-full ${j < players[num-1].lives ? 'bg-red-600 shadow-[0_0_10px_red]' : 'bg-zinc-800'}`} />
               ))}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center w-full">
         {isGameOver ? (
-          <div className="text-center">
-            <h2 className="text-5xl font-black italic tracking-tighter text-red-600 mb-4 animate-bounce">PLAYER {winner} WINS!</h2>
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center">
+            <h2 className="text-6xl font-black italic tracking-tighter text-red-600 mb-6 drop-shadow-2xl">PLAYER {winner} WINS</h2>
             {myRole === 1 && (
-              <button onClick={() => updateConfig('is_started', false)} className="px-8 py-3 bg-white text-black font-bold rounded-full uppercase text-xs tracking-widest">Back to Lobby</button>
+              <button onClick={() => updateConfig('is_started', false)} className="px-10 py-4 bg-white text-black font-black rounded-full uppercase text-xs tracking-[0.2em] hover:scale-105 transition-transform">Reset Lobby</button>
             )}
-          </div>
+          </motion.div>
         ) : (
           <>
             <motion.div 
-              animate={timer <= 3 ? { x: [-2, 2, -2, 2, 0] } : {}}
-              className={`w-64 h-64 rounded-full border-8 flex flex-col items-center justify-center transition-all 
-                ${feedback === 'correct' ? 'border-green-500' : feedback === 'error' ? 'border-red-500' : 'border-zinc-800'}`}
+              animate={timer <= 3 ? { x: [-2, 2, -2, 2, 0], scale: [1, 1.05, 1] } : {}}
+              className={`w-64 h-64 rounded-full border-8 flex flex-col items-center justify-center transition-all duration-300
+                ${feedback === 'correct' ? 'border-green-500 shadow-[0_0_40px_rgba(34,197,94,0.3)]' : 
+                  feedback === 'error' ? 'border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.3)]' : 'border-zinc-800'}`}
             >
-              <span className="text-[10px] text-zinc-500 font-bold tracking-[0.3em]">CONTAINS</span>
-              <h1 className="text-7xl font-black">{prompt}</h1>
-              <p className={`text-2xl font-mono ${timer <= 3 ? 'text-red-500' : 'text-yellow-500'}`}>{timer}s</p>
+              <span className="text-[10px] text-zinc-500 font-bold tracking-[0.3em] uppercase">Contains</span>
+              <h1 className="text-7xl font-black tracking-tighter">{prompt}</h1>
+              <p className={`text-3xl font-mono font-bold mt-2 ${timer <= 3 ? 'text-red-600 animate-pulse' : 'text-yellow-500'}`}>{timer}s</p>
             </motion.div>
 
-            <form onSubmit={handleSubmit} className="mt-12">
-              <input 
-                autoFocus value={input} 
-                onChange={e => setInput(e.target.value)}
-                disabled={myRole !== turn}
-                className={`bg-transparent border-b-4 border-zinc-900 text-5xl font-black text-center uppercase focus:outline-none focus:border-yellow-500 w-80 transition-opacity ${myRole !== turn ? 'opacity-20' : 'opacity-100'}`}
-                placeholder={myRole === turn ? "..." : "WAIT"}
-              />
-            </form>
+            <div className="mt-12 w-full max-w-md flex flex-col items-center relative">
+              {/* REMOTE TYPING PREVIEW */}
+              <div className="h-10 text-zinc-600 font-black text-2xl uppercase italic opacity-50 absolute -top-10">
+                {turn !== myRole && remoteInput}
+              </div>
+
+              <form onSubmit={handleSubmit} className="w-full">
+                <input 
+                  autoFocus 
+                  value={input} 
+                  onChange={handleInputChange}
+                  disabled={myRole !== turn}
+                  className={`bg-transparent border-b-4 border-zinc-900 text-5xl font-black text-center uppercase focus:outline-none focus:border-red-600 w-full transition-all duration-500 ${myRole !== turn ? 'opacity-10 cursor-not-allowed' : 'opacity-100'}`}
+                  placeholder={myRole === turn ? "TYPE NOW" : "WAIT..."}
+                />
+              </form>
+            </div>
           </>
         )}
       </div>
       
-      <div className="flex gap-4 text-zinc-600 uppercase text-xs font-bold overflow-hidden h-4">
-        <AnimatePresence>
-          {usedWords.slice(0, 5).map((w, i) => (
-            <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={w}>{w}</motion.span>
-          ))}
-        </AnimatePresence>
+      {/* Join/Leave Notifications */}
+      <AnimatePresence>
+        {(!presence.p1 || !presence.p2) && (
+          <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} 
+            className="fixed bottom-8 bg-zinc-900 border border-zinc-800 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest text-yellow-500 shadow-2xl">
+            Waiting for players to connect...
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex gap-4 text-zinc-700 uppercase text-[10px] font-black tracking-widest h-4">
+        {usedWords.slice(0, 5).map((w) => <span key={w}>{w}</span>)}
       </div>
     </main>
   );
