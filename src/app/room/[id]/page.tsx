@@ -13,6 +13,7 @@ export default function GameRoom() {
   const [remoteInput, setRemoteInput] = useState(""); 
   const [presence, setPresence] = useState({ p1: false, p2: false });
   const channelRef = useRef<any>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   const [input, setInput] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -75,6 +76,7 @@ export default function GameRoom() {
     setTurn(data.current_turn);
     setUsedWords(data.used_words || []);
     setPlayers([{ id: 1, lives: data.p1_lives }, { id: 2, lives: data.p2_lives }]);
+    setIsPaused(data.is_paused);
     setGameConfig({
       maxLives: data.max_lives,
       duration: data.bomb_duration,
@@ -87,23 +89,24 @@ export default function GameRoom() {
 
   // Timer logic
   useEffect(() => {
-    if (!gameConfig.isStarted || myRole !== turn || players[0].lives <= 0 || players[1].lives <= 0) return;
+  // Add !isPaused to the guard clause
+  if (!gameConfig.isStarted || isPaused || myRole !== turn || players[0].lives <= 0 || players[1].lives <= 0) return;
 
-    if (timer > 0) {
-      const t = setTimeout(() => {
-        const nextTime = timer - 1;
-        setTimer(nextTime);
-        channelRef.current?.send({
-          type: 'broadcast',
-          event: 'timer_sync',
-          payload: { timer: nextTime }
-        });
-      }, 1000);
-      return () => clearTimeout(t);
-    } else {
-      handleTimeout();
-    }
-  }, [timer, turn, myRole, gameConfig.isStarted]);
+  if (timer > 0) {
+    const t = setTimeout(() => {
+      const nextTime = timer - 1;
+      setTimer(nextTime);
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'timer_sync',
+        payload: { timer: nextTime }
+      });
+    }, 1000);
+    return () => clearTimeout(t);
+  } else {
+    handleTimeout();
+  }
+}, [timer, turn, myRole, gameConfig.isStarted, isPaused]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
