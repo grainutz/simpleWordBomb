@@ -72,24 +72,37 @@ export default function GameRoom() {
   }, [roomId, myRole, turn]);
 
   const syncState = (data: any) => {
-    setPrompt(data.prompt);
-    setTurn(data.current_turn);
-    setUsedWords(data.used_words || []);
-    setPlayers([{ id: 1, lives: data.p1_lives }, { id: 2, lives: data.p2_lives }]);
-    setIsPaused(data.is_paused);
-    setGameConfig({
-      maxLives: data.max_lives,
-      duration: data.bomb_duration,
-      difficulty: data.difficulty,
-      isStarted: data.is_started
-    });
-    if (data.is_started) setTimer(data.bomb_duration);
-    setRemoteInput(""); 
-  };
+  setPrompt(data.prompt);
+  setTurn(data.current_turn);
+  setUsedWords(data.used_words || []);
+  setPlayers([{ id: 1, lives: data.p1_lives }, { id: 2, lives: data.p2_lives }]);
+  setIsPaused(data.is_paused);
+  
+  setGameConfig({
+    maxLives: data.max_lives,
+    duration: data.bomb_duration,
+    difficulty: data.difficulty,
+    isStarted: data.is_started
+  });
+  if (data.current_timer_value !== null && data.current_timer_value !== undefined) {
+    setTimer(data.current_timer_value);
+  } else if (data.is_started) {
+    setTimer(data.bomb_duration);
+  }
+  setRemoteInput(""); 
+};
 
   const togglePause = async () => {
   if (myRole !== 1) return;
-  await supabase.from('rooms').update({ is_paused: !isPaused }).eq('id', roomId);
+  
+  const newPausedState = !isPaused;
+  
+  await supabase.from('rooms').update({ 
+    is_paused: newPausedState,
+    // If we are pausing, save the current timer. 
+    // If we are resuming, the timer is already stored.
+    current_timer_value: timer 
+  }).eq('id', roomId);
 };
 
   // Timer logic
@@ -126,11 +139,12 @@ export default function GameRoom() {
   const handleTimeout = async () => {
     const isP1 = turn === 1;
     await supabase.from('rooms').update({
-      p1_lives: isP1 ? players[0].lives - 1 : players[0].lives,
-      p2_lives: !isP1 ? players[1].lives - 1 : players[1].lives,
-      current_turn: turn === 1 ? 2 : 1,
-      prompt: getPromptByDifficulty(gameConfig.difficulty),
-    }).eq('id', roomId);
+  p1_lives: isP1 ? players[0].lives - 1 : players[0].lives,
+  p2_lives: !isP1 ? players[1].lives - 1 : players[1].lives,
+  current_turn: turn === 1 ? 2 : 1,
+  prompt: getPromptByDifficulty(gameConfig.difficulty),
+  current_timer_value: gameConfig.duration // Reset for the next person!
+}).eq('id', roomId);
   };
 
   const updateConfig = async (key: string, value: any) => {
@@ -156,10 +170,11 @@ export default function GameRoom() {
     if (isValidWord(cleanInput, prompt) && !usedWords.includes(cleanInput)) {
       setFeedback('correct');
       await supabase.from('rooms').update({
-        prompt: getPromptByDifficulty(gameConfig.difficulty),
-        current_turn: turn === 1 ? 2 : 1,
-        used_words: [cleanInput, ...usedWords],
-      }).eq('id', roomId);
+  prompt: getPromptByDifficulty(gameConfig.difficulty),
+  current_turn: turn === 1 ? 2 : 1,
+  used_words: [cleanInput, ...usedWords],
+  current_timer_value: gameConfig.duration // Reset for the next person!
+}).eq('id', roomId);
       setInput("");
       channelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { text: "", role: myRole } });
     } else {
@@ -168,7 +183,6 @@ export default function GameRoom() {
     setTimeout(() => setFeedback(null), 400);
   };
 
-  // --- UI RENDER BLOCKS ---
 
   if (!myRole) return (
     <div className="min-h-screen bg-[#FFF8E1] flex flex-col items-center justify-center gap-8">
