@@ -9,12 +9,11 @@ export default function GameRoom() {
   const { id: roomId } = useParams();
   const [myRole, setMyRole] = useState<number | null>(null);
   
-  // --- NEW REAL-TIME STATES ---
+  // real time states
   const [remoteInput, setRemoteInput] = useState(""); 
   const [presence, setPresence] = useState({ p1: false, p2: false });
   const channelRef = useRef<any>(null);
 
-  // --- EXISTING STATES ---
   const [input, setInput] = useState("");
   const [prompt, setPrompt] = useState("");
   const [timer, setTimer] = useState(10);
@@ -30,40 +29,40 @@ export default function GameRoom() {
     isStarted: false
   });
 
-  // 1. Unified Real-Time Effect (Broadcast, Presence, and DB Changes)
+  // real time
   useEffect(() => {
     if (!roomId) return;
 
-    // Fetch initial state from DB
+    // fetchInitial state from DB
     const fetchInitial = async () => {
       const { data } = await supabase.from('rooms').select('*').eq('id', roomId).single();
       if (data) syncState(data);
     };
     fetchInitial();
 
-    // Create Channel for Broadcast and Presence
+    // channel for broadcast and presence
     const channel = supabase.channel(`room:${roomId}`, {
       config: { presence: { key: myRole?.toString() || 'spectator' } }
     });
     channelRef.current = channel;
 
     channel
-      // A. Listen for DB updates (turn changes, prompt changes)
+      // DB updates (turn changes, prompt changes)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` }, 
         (payload) => syncState(payload.new))
       
-      // B. Listen for Live Typing (Broadcast)
+      // live typing
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.role !== myRole) setRemoteInput(payload.text);
       })
 
-      // C. Listen for Timer Sync (Broadcast)
+      // timer sync
       .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
-        // Only sync if it's NOT my turn (I follow the master clock of the active player)
+        
         if (myRole !== turn) setTimer(payload.timer);
       })
 
-      // D. Listen for Presence (Join/Leave)
+      // presence
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         setPresence({
@@ -73,7 +72,6 @@ export default function GameRoom() {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED' && myRole) {
-          // Track my presence as "1" or "2"
           await channel.track({ online_at: new Date().toISOString() });
         }
       });
@@ -93,10 +91,10 @@ export default function GameRoom() {
       isStarted: data.is_started
     });
     if (data.is_started) setTimer(data.bomb_duration);
-    setRemoteInput(""); // Clear typing preview on turn change
+    setRemoteInput(""); 
   };
 
-  // 2. Timer Authority + Timer Broadcast
+  // timer authority: only the player whose turn it is will run the timer logic to prevent desync
   useEffect(() => {
     if (!gameConfig.isStarted || myRole !== turn || players[0].lives <= 0 || players[1].lives <= 0) return;
 
@@ -105,7 +103,7 @@ export default function GameRoom() {
         const nextTime = timer - 1;
         setTimer(nextTime);
         
-        // Broadcast my local timer to the opponent
+        // broadcast my local timer to the opponent
         channelRef.current?.send({
           type: 'broadcast',
           event: 'timer_sync',
@@ -118,12 +116,11 @@ export default function GameRoom() {
     }
   }, [timer, turn, myRole, gameConfig.isStarted]);
 
-  // 3. Handle My Typing + Broadcast
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInput(val);
     
-    // Send keystrokes to the other player
     channelRef.current?.send({
       type: 'broadcast',
       event: 'typing',
@@ -176,7 +173,6 @@ export default function GameRoom() {
     setTimeout(() => setFeedback(null), 400);
   };
 
-  // --- UI RENDER LOGIC ---
 
   if (!myRole) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
