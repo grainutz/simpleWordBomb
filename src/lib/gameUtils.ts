@@ -2,16 +2,15 @@
 
 import { WORDS } from './wordList';
 
-// Cache the dictionary set
+// cache the dictionary set
 const dictionarySet = new Set(WORDS.map(w => w.toUpperCase()));
 
-// Pre-filter words that are too obscure or contain unusual letter combinations
 const playableWords = WORDS.filter(word => {
   const upper = word.toUpperCase();
-  // Remove very short or very long words
+  // no short or long words
   if (upper.length < 4 || upper.length > 15) return false;
   
-  // Remove words with rare consecutive consonants
+  // take out words with rare consecutive consonants
   const rarePatterns = /[BCDFGHJKLMNPQRSTVWXYZ]{4,}|XQ|QZ|XZ|BPM|XIM/i;
   if (rarePatterns.test(word)) return false;
   
@@ -25,17 +24,17 @@ export const isValidWord = (word: string, prompt: string): boolean => {
   return (
     upperWord.length > 2 &&
     upperWord.includes(prompt.toUpperCase()) &&
-    dictionarySet.has(upperWord) // Still check against full dictionary for answers
+    dictionarySet.has(upperWord) 
   );
 };
 
-// Helper function to count words that contain a prompt
+//count words that contain a prompt
 const countWordsWithPrompt = (prompt: string): number => {
   let count = 0;
   for (const word of playableWords) {
     if (word.toUpperCase().includes(prompt)) {
       count++;
-      if (count > 50) break; // Early exit for common prompts
+      if (count > 50) break; 
     }
   }
   return count;
@@ -63,16 +62,13 @@ export const getRandomPrompt = (): string => {
     // 80% chance for 2 letter prompts
     const length = Math.random() > 0.8 ? 3 : 2;
 
-    // Extract from middle of word more often (not first/last letter)
     const maxStart = randomWord.length - length;
     const minStart = Math.min(1, maxStart);
     const start = minStart + Math.floor(Math.random() * (maxStart - minStart + 1));
     const prompt = randomWord.substring(start, start + length);
 
-    // Validate the prompt has enough words
     const wordCount = countWordsWithPrompt(prompt);
     
-    //check if at least 10 words contain this prompt
     if (wordCount >= 10) {
       // avoid prompts with rare letter combinations
       if (!/X[^AEIOU]|[^AEIOU]X|Q[^U]|[BCDFGHJKLMNPQRSTVWXYZ]{3}/i.test(prompt)) {
@@ -81,11 +77,9 @@ export const getRandomPrompt = (): string => {
     }
   }
 
-  // a guaranteed common prompt
   return commonPrompts[Math.floor(Math.random() * commonPrompts.length)];
 };
 
-// Optional: Add difficulty levels
 export const getPromptByDifficulty = (difficulty: 'easy' | 'medium' | 'hard'): string => {
   const easyPrompts = ["ING", "ER", "ED", "LY", "ION", "AL", "EN", "RE"];
   const mediumPrompts = ["ENT", "TION", "CON", "PRE", "BLE", "NESS", "MENT", "IST"];
