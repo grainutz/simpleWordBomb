@@ -1,12 +1,15 @@
 import React from 'react';
-import type { GameConfig } from '@/hooks/useGameRoom';
+import { CharacterSelect } from './characterSelect';
+import type { GameConfig, Player, Character } from '@/hooks/useGameRoom';
 
 type GameLobbyProps = {
   roomId: string;
   myRole: number | null;
   gameConfig: GameConfig;
+  players: Player[];
   presence: { p1: boolean; p2: boolean };
   onUpdateConfig: (key: string, value: any) => void;
+  onSelectCharacter: (character: Character) => void;
   onStartGame: () => void;
 };
 
@@ -14,8 +17,10 @@ export function GameLobby({
   roomId,
   myRole,
   gameConfig,
+  players,
   presence,
   onUpdateConfig,
+  onSelectCharacter,
   onStartGame
 }: GameLobbyProps) {
   return (
@@ -39,6 +44,15 @@ export function GameLobby({
         </h2>
 
         <div className="space-y-8">
+          {/* Character Selection */}
+          <div className="pb-6 border-b-4 border-dashed border-zinc-100">
+            <CharacterSelect
+              myRole={myRole || 0}
+              selectedCharacter={players.find(p => p.id === myRole)?.character || null}
+              onSelectCharacter={onSelectCharacter}
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="text-xs text-[#8D6E63] font-black uppercase tracking-widest">
               Lives: {gameConfig.maxLives} Potatoes
@@ -103,12 +117,20 @@ export function GameLobby({
           </div>
 
           {myRole === 1 ? (
-            <button
-              onClick={onStartGame}
-              className="w-full py-5 bg-[#FF7043] text-white rounded-2xl font-black text-2xl uppercase shadow-[0_8px_0_#BF360C] hover:translate-y-1 hover:shadow-[0_4px_0_#BF360C] active:translate-y-2 active:shadow-none transition-all"
-            >
-              START COOKING!
-            </button>
+            <>
+              {!players[0].character || !players[1].character ? (
+                <p className="text-center text-[#FF7043] font-bold italic animate-pulse">
+                  Both chefs must pick a character!
+                </p>
+              ) : (
+                <button
+                  onClick={onStartGame}
+                  className="w-full py-5 bg-[#FF7043] text-white rounded-2xl font-black text-2xl uppercase shadow-[0_8px_0_#BF360C] hover:translate-y-1 hover:shadow-[0_4px_0_#BF360C] active:translate-y-2 active:shadow-none transition-all"
+                >
+                  START COOKING!
+                </button>
+              )}
+            </>
           ) : (
             <p className="text-center text-[#8D6E63] font-bold italic animate-pulse">
               Wait for Chef 1 to start...
