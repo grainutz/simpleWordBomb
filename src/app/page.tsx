@@ -3,12 +3,21 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getPromptByDifficulty } from '@/lib/gameUtils';
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
   const router = useRouter();
+  const [heroFrame, setHeroFrame] = useState(0);
+
+  // Animate hero potato
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroFrame(prev => (prev + 1) % 3);
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
 
   const createRoom = async () => {
-    // Generate a short, readable room ID (e.g., "pot-123")
     const newRoomId = Math.random().toString(36).substring(2, 7).toUpperCase();
     
     const { error } = await supabase.from('rooms').insert({
@@ -32,52 +41,56 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF8E1] flex flex-col items-center justify-center font-sans p-4 overflow-hidden relative">
-      {/* Animated Steam Background Elements */}
-      <motion.div 
-        animate={{ y: [-10, -30], opacity: [0, 0.5, 0] }}
-        transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
-        className="absolute text-6xl pointer-events-none"
-      >💨</motion.div>
+    <div className="min-h-screen bg-[#FFF8E1] flex flex-col items-center justify-center font-sans p-4 gap-12">
+      {/* Title */}
+      <img 
+        src="/sprites/ui/title-hot-potato.png"
+        alt="HOT POTATO"
+        className="h-24 select-none"
+        style={{ imageRendering: 'pixelated' }}
+      />
 
-      {/* The Hero Potato */}
+      {/* Hero Potato */}
       <motion.div 
         animate={{ 
-          rotate: [0, 5, -5, 0], 
           y: [0, -15, 0],
           scale: [1, 1.05, 1]
         }}
-        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-        className="text-[120px] mb-6 drop-shadow-xl cursor-default select-none"
+        transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+        className="drop-shadow-2xl"
       >
-        🥔
+        <img 
+          src={`/sprites/ui/potato-hero-${heroFrame}.png`}
+          alt="Hot Potato"
+          className="w-48 h-48 object-contain select-none"
+          style={{ imageRendering: 'pixelated' }}
+        />
       </motion.div>
-
-      {/* Title & Subtitle */}
-      <div className="text-center mb-10">
-        <h1 className="text-7xl font-black text-[#5D4037] mb-2 tracking-tighter italic">
-          HOT POTATO
-        </h1>
-        <div className="h-1 w-full bg-[#5D4037] rounded-full mb-3 opacity-20" />
-        <p className="text-[#8D6E63] font-black uppercase tracking-[0.3em] text-xs">
-          Type fast or get mashed!
-        </p>
-      </div>
       
-      {/* Action Button */}
+      {/* Button (text already in sprite) */}
       <button 
         onClick={createRoom}
-        className="group relative px-12 py-6 bg-[#FF7043] text-white font-black rounded-[2rem] border-4 border-[#5D4037] shadow-[0_10px_0_#BF360C] hover:shadow-[0_6px_0_#BF360C] hover:translate-y-[4px] active:shadow-none active:translate-y-[10px] transition-all duration-75 uppercase tracking-tighter text-3xl italic"
+        className="group relative"
       >
-        <span className="flex items-center gap-3">
-          Cook Game <span className="group-hover:rotate-12 transition-transform">🔥</span>
-        </span>
+        <img 
+          src="/sprites/ui/button-normal.png"
+          alt="Start Game"
+          className="group-hover:hidden w-64 h-auto transition-all"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <img 
+          src="/sprites/ui/button-hover.png"
+          alt="Start Game"
+          className="hidden group-hover:block group-active:hidden w-64 h-auto absolute top-0 left-0"
+          style={{ imageRendering: 'pixelated' }}
+        />
+        <img 
+          src="/sprites/ui/button-pressed.png"
+          alt="Start Game"
+          className="hidden group-active:block w-64 h-auto absolute top-0 left-0"
+          style={{ imageRendering: 'pixelated' }}
+        />
       </button>
-
-      {/* Decorative Footer */}
-      <p className="fixed bottom-8 text-[#8D6E63]/40 font-bold uppercase text-[10px] tracking-widest">
-        Best served with friends • 2026 Edition
-      </p>
     </div>
   );
 }
