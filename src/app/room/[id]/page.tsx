@@ -27,6 +27,7 @@ export default function GameRoom() {
     handleSubmit,
     togglePause,
     updateConfig,
+    selectCharacter,
     startGame,
   } = useGameRoom(roomId as string, myRole);
 
@@ -69,8 +70,10 @@ export default function GameRoom() {
         roomId={roomId as string}
         myRole={myRole}
         gameConfig={gameConfig}
+        players={players}
         presence={presence}
         onUpdateConfig={updateConfig}
+        onSelectCharacter={selectCharacter}
         onStartGame={startGame}
       />
     );
@@ -91,6 +94,7 @@ export default function GameRoom() {
       isGameOver={isGameOver}
       winner={winner}
       maxLives={gameConfig.maxLives}
+      gameConfig={{ duration: gameConfig.duration }}
       presence={presence}
       onInputChange={handleInputChange}
       onSubmit={handleSubmit}
