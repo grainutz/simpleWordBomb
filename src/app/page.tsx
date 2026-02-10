@@ -12,7 +12,7 @@ export default function Home() {
   // Animate hero potato
   useEffect(() => {
     const interval = setInterval(() => {
-      setHeroFrame(prev => (prev + 1) % 3);
+      setHeroFrame(prev => (prev + 1) % 2);
     }, 400);
     return () => clearInterval(interval);
   }, []);
