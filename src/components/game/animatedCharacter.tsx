@@ -84,7 +84,8 @@ export function AnimatedCharacter({
           className="w-32 h-32 object-contain"
           style={{
             imageRendering: 'pixelated',
-            filter: lives <= 0 ? 'grayscale(1) opacity(0.5)' : 'none'
+            filter: lives <= 0 ? 'grayscale(1) opacity(0.5)' : 'none',
+            transform: position === 'right' ? 'scaleX(-1)' : 'none'
           }}
         />
         
