@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PlayerStatus } from './playerStatus';
-import { PotatoBomb } from './potatoBomb';
+import { AnimatedCharacter } from './animatedCharacter';
 import { PauseOverlay } from './pauseOverlay';
 import type { Player } from '@/hooks/useGameRoom';
 
@@ -18,12 +18,22 @@ type GameBoardProps = {
   isGameOver: boolean;
   winner: number;
   maxLives: number;
+  gameConfig: { duration: number };
   presence: { p1: boolean; p2: boolean };
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onTogglePause: () => void;
   onUpdateConfig: (key: string, value: any) => void;
 };
+
+// Helper function to determine potato burn level (0-3)
+function getPotatoSprite(timer: number, duration: number): number {
+  const percentage = (timer / duration) * 100;
+  if (percentage > 66) return 0; // Fresh
+  if (percentage > 33) return 1; // Slightly burnt
+  if (percentage > 10) return 2; // Very burnt
+  return 3; // Critical!
+}
 
 export function GameBoard({
   myRole,
@@ -38,6 +48,7 @@ export function GameBoard({
   isGameOver,
   winner,
   maxLives,
+  gameConfig,
   presence,
   onInputChange,
   onSubmit,
@@ -91,8 +102,40 @@ export function GameBoard({
               )}
             </motion.div>
           ) : (
-            <div className="relative flex flex-col items-center">
-              <PotatoBomb prompt={prompt} timer={timer} turn={turn} />
+            <div className="relative flex flex-col items-center w-full max-w-4xl">
+              {/* Characters with potato */}
+              <div className="flex justify-between items-center w-full px-12 mb-12">
+                {/* Player 1 */}
+                <AnimatedCharacter
+                  character={players[0].character || 'seal'}
+                  potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
+                  isActive={turn === 1}
+                  position="left"
+                  lives={players[0].lives}
+                />
+
+                {/* Prompt Display */}
+                <div className="flex flex-col items-center gap-4">
+                  <div className="bg-white border-8 border-[#5D4037] rounded-3xl px-12 py-8 shadow-2xl">
+                    <h1 className="text-7xl font-black tracking-tighter uppercase text-[#5D4037]">
+                      {prompt}
+                    </h1>
+                  </div>
+                  
+                  <div className="bg-[#5D4037] text-white px-8 py-4 rounded-full font-black text-3xl border-4 border-white shadow-xl">
+                    ⏱️ {timer}s
+                  </div>
+                </div>
+
+                {/* Player 2 */}
+                <AnimatedCharacter
+                  character={players[1].character || 'capybara'}
+                  potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
+                  isActive={turn === 2}
+                  position="right"
+                  lives={players[1].lives}
+                />
+              </div>
 
               <div className="mt-24 flex flex-col items-center">
                 <div className="h-10 mb-2 font-black text-[#FF7043] text-2xl italic uppercase">

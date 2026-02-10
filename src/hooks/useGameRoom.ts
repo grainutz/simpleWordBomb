@@ -4,6 +4,8 @@ import { useGameTimer } from './useGameTimer';
 import { gameService } from '@/services/gameService';
 import { getPromptByDifficulty } from '@/lib/gameUtils';
 
+export type Character = 'seal' | 'capybara';
+
 export type GameConfig = {
   maxLives: number;
   duration: number;
@@ -14,6 +16,7 @@ export type GameConfig = {
 export type Player = {
   id: number;
   lives: number;
+  character: Character | null;
 };
 
 export function useGameRoom(roomId: string, myRole: number | null) {
@@ -23,8 +26,8 @@ export function useGameRoom(roomId: string, myRole: number | null) {
   const [usedWords, setUsedWords] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'error' | null>(null);
   const [players, setPlayers] = useState<Player[]>([
-    { id: 1, lives: 3 }, 
-    { id: 2, lives: 3 }
+    { id: 1, lives: 3, character: null }, 
+    { id: 2, lives: 3, character: null }
   ]);
   const [isPaused, setIsPaused] = useState(false);
   const [gameConfig, setGameConfig] = useState<GameConfig>({
@@ -59,8 +62,8 @@ export function useGameRoom(roomId: string, myRole: number | null) {
     setTurn(data.current_turn);
     setUsedWords(data.used_words || []);
     setPlayers([
-      { id: 1, lives: data.p1_lives }, 
-      { id: 2, lives: data.p2_lives }
+      { id: 1, lives: data.p1_lives, character: data.p1_character }, 
+      { id: 2, lives: data.p2_lives, character: data.p2_character }
     ]);
     setIsPaused(data.is_paused);
     
@@ -90,6 +93,12 @@ export function useGameRoom(roomId: string, myRole: number | null) {
   async function updateConfig(key: string, value: any) {
     if (myRole !== 1) return;
     await gameService.updateConfig(roomId, key, value);
+  }
+
+  async function selectCharacter(character: Character) {
+    if (!myRole) return;
+    const field = myRole === 1 ? 'p1_character' : 'p2_character';
+    await gameService.updateConfig(roomId, field, character);
   }
 
   async function startGame() {
@@ -150,6 +159,7 @@ export function useGameRoom(roomId: string, myRole: number | null) {
     handleSubmit,
     togglePause,
     updateConfig,
+    selectCharacter,
     startGame,
   };
 }
