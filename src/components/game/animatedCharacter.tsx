@@ -46,7 +46,7 @@ export function AnimatedCharacter({
           {/* Potato sprite - replace with your actual sprite */}
           <div className="relative">
             <img
-              src={`/sprites/potato-${potatoSprite}.png`}
+              src={`public/sprites/potato-${potatoSprite}.png`}
               alt="Hot Potato"
               className="w-20 h-20 object-contain"
               style={{
@@ -79,7 +79,7 @@ export function AnimatedCharacter({
         className="relative"
       >
         <img
-          src={`/sprites/${character}-idle-${idleFrame}.png`}
+          src={`public/sprites/${character}-idle-${idleFrame}.png`}
           alt={character}
           className="w-32 h-32 object-contain"
           style={{
