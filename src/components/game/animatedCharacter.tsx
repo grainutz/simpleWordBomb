@@ -81,7 +81,7 @@ export function AnimatedCharacter({
         <img
           src={`/sprites/${character}-idle-${idleFrame}.png`}
           alt={character}
-          className="w-32 h-32 object-contain"
+          className="w-64 h-64 object-contain"
           style={{
             imageRendering: 'pixelated',
             filter: lives <= 0 ? 'grayscale(1) opacity(0.5)' : 'none',
