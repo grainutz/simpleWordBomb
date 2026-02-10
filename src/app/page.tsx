@@ -68,27 +68,27 @@ export default function Home() {
       </motion.div>
       
       {/* Button (text already in sprite) */}
-      <button 
+      <button
         onClick={createRoom}
-        className="group relative"
+        className="group relative w-64"
       >
-        <img 
+        <img
           src="/sprites/ui/button-normal.png"
           alt="Start Game"
-          className="group-hover:hidden w-64 h-auto transition-all"
-          style={{ imageRendering: 'pixelated' }}
+          className="absolute inset-0 group-hover:hidden w-full h-auto"
+          style={{ imageRendering: "pixelated" }}
         />
-        <img 
+        <img
           src="/sprites/ui/button-hover.png"
           alt="Start Game"
-          className="hidden group-hover:block group-active:hidden w-64 h-auto absolute top-0 left-0"
-          style={{ imageRendering: 'pixelated' }}
+          className="absolute inset-0 hidden group-hover:block group-active:hidden w-full h-auto"
+          style={{ imageRendering: "pixelated" }}
         />
-        <img 
+        <img
           src="/sprites/ui/button-pressed.png"
           alt="Start Game"
-          className="hidden group-active:block w-64 h-auto absolute top-0 left-0"
-          style={{ imageRendering: 'pixelated' }}
+          className="absolute inset-0 hidden group-active:block w-full h-auto"
+          style={{ imageRendering: "pixelated" }}
         />
       </button>
     </div>
