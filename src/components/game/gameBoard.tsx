@@ -26,13 +26,13 @@ type GameBoardProps = {
   onUpdateConfig: (key: string, value: any) => void;
 };
 
-// Helper function to determine potato burn level (0-3)
+// helper potato burn indicator
 function getPotatoSprite(timer: number, duration: number): number {
   const percentage = (timer / duration) * 100;
-  if (percentage > 66) return 0; // Fresh
-  if (percentage > 33) return 1; // Slightly burnt
-  if (percentage > 10) return 2; // Very burnt
-  return 3; // Critical!
+  if (percentage > 66) return 0; 
+  if (percentage > 33) return 1; 
+  if (percentage > 10) return 2; 
+  return 3; 
 }
 
 export function GameBoard({
@@ -74,9 +74,14 @@ export function GameBoard({
       {!isGameOver && myRole === 1 && (
         <button
           onClick={onTogglePause}
-          className="fixed top-8 right-8 w-14 h-14 bg-white border-4 border-[#5D4037] rounded-full flex items-center justify-center text-2xl shadow-[0_4px_0_#5D4037] active:translate-y-1 active:shadow-none z-40"
+          className="fixed top-8 right-8 z-40 group"
         >
-          {isPaused ? "▶️" : "⏸️"}
+          <img
+            src={isPaused ? "/sprites/ui/icon-play.png" : "/sprites/ui/icon-pause.png"}
+            alt={isPaused ? "Resume" : "Pause"}
+            className="w-14 h-14 group-hover:scale-110 group-active:scale-95 transition-transform"
+            style={{ imageRendering: 'pixelated' }}
+          />
         </button>
       )}
 
@@ -86,16 +91,24 @@ export function GameBoard({
             <motion.div
               initial={{ y: -500 }}
               animate={{ y: 0 }}
-              className="text-center bg-white p-12 rounded-[40px] shadow-2xl border-8 border-[#5D4037]"
+              className="text-center flex flex-col items-center"
             >
-              <h2 className="text-6xl font-black mb-4 uppercase italic">MASHED!</h2>
+              {/* Victory/Defeat Banner */}
+              <img
+                src={myRole === winner ? "/sprites/ui/banner-victory.png" : "/sprites/ui/banner-defeat.png"}
+                alt={myRole === winner ? "Victory!" : "Defeat"}
+                className="w-96 h-auto mb-8"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              
               <p className="text-xl font-bold text-[#8D6E63] mb-8 uppercase">
                 Chef {winner} wins the round!
               </p>
+              
               {myRole === 1 && (
                 <button
                   onClick={() => onUpdateConfig('is_started', false)}
-                  className="px-10 py-5 bg-[#FF7043] text-white font-black rounded-2xl text-xl shadow-[0_6px_0_#BF360C] active:translate-y-1"
+                  className="px-10 py-5 bg-[#FF7043] text-white font-black rounded-2xl text-xl shadow-[0_6px_0_#BF360C] hover:translate-y-1 hover:shadow-[0_4px_0_#BF360C] active:translate-y-2 active:shadow-none transition-all"
                 >
                   PLAY AGAIN
                 </button>
@@ -103,9 +116,9 @@ export function GameBoard({
             </motion.div>
           ) : (
             <div className="relative flex flex-col items-center w-full max-w-4xl">
-              {/* Characters with potato */}
+              
               <div className="flex justify-between items-center w-full px-12 mb-12">
-                {/* Player 1 */}
+                {/* p1 */}
                 <AnimatedCharacter
                   character={players[0].character || 'seal'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
@@ -114,7 +127,6 @@ export function GameBoard({
                   lives={players[0].lives}
                 />
 
-                {/* Prompt Display */}
                 <div className="flex flex-col items-center gap-4">
                   <div className="bg-white border-8 border-[#5D4037] rounded-3xl px-12 py-8 shadow-2xl">
                     <h1 className="text-7xl font-black tracking-tighter uppercase text-[#5D4037]">
@@ -127,7 +139,7 @@ export function GameBoard({
                   </div>
                 </div>
 
-                {/* Player 2 */}
+                {/* p2 */}
                 <AnimatedCharacter
                   character={players[1].character || 'capybara'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}

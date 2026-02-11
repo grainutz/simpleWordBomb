@@ -37,19 +37,24 @@ export function PlayerStatus({
               Chef {num} {myRole === num && "(YOU)"}
             </p>
           </div>
+          
           <div className="flex gap-1">
-            {[...Array(maxLives)].map((_, j) => (
-              <span
-                key={j}
-                className={`text-2xl ${
-                  j < players[num - 1].lives
-                    ? 'grayscale-0'
-                    : 'grayscale opacity-20'
-                }`}
-              >
-                🥔
-              </span>
-            ))}
+            {[...Array(maxLives)].map((_, j) => {
+              const livesLeft = players[num - 1].lives;
+              const isAlive = j < livesLeft;
+              
+              return (
+                <img
+                  key={j}
+                  src={`/sprites/potato-${isAlive ? '0' : '3'}.png`}
+                  alt={isAlive ? 'Life' : 'Lost'}
+                  className={`w-8 h-8 object-contain transition-all ${
+                    isAlive ? 'grayscale-0' : 'grayscale opacity-50'
+                  }`}
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              );
+            })}
           </div>
         </div>
       ))}

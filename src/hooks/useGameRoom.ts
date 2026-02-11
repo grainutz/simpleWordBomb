@@ -139,7 +139,7 @@ export function useGameRoom(roomId: string, myRole: number | null) {
   const winner = players[0].lives > 0 ? 1 : 2;
 
   return {
-    // State
+    // state
     input,
     prompt,
     timer,
@@ -154,7 +154,7 @@ export function useGameRoom(roomId: string, myRole: number | null) {
     isGameOver,
     winner,
 
-    // Actions
+    // action
     handleInputChange,
     handleSubmit,
     togglePause,
