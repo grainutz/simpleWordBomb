@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { PlayerStatus } from './playerStatus';
 import { AnimatedCharacter } from './animatedCharacter';
 import { PauseOverlay } from './pauseOverlay';
+import { ValentineCelebration } from './valentineCelebration'; // IMPORT THIS
 import type { Player } from '@/hooks/useGameRoom';
 
 type GameBoardProps = {
@@ -17,6 +18,7 @@ type GameBoardProps = {
   isPaused: boolean;
   isGameOver: boolean;
   winner: number;
+  valentineSuccess: boolean; // NEW PROP TYPE
   maxLives: number;
   gameConfig: { duration: number };
   presence: { p1: boolean; p2: boolean };
@@ -26,7 +28,6 @@ type GameBoardProps = {
   onUpdateConfig: (key: string, value: any) => void;
 };
 
-// helper potato burn indicator
 function getPotatoSprite(timer: number, duration: number): number {
   const percentage = (timer / duration) * 100;
   if (percentage > 66) return 0; 
@@ -47,6 +48,7 @@ export function GameBoard({
   isPaused,
   isGameOver,
   winner,
+  valentineSuccess, // DESTRUCTURE NEW PROP
   maxLives,
   gameConfig,
   presence,
@@ -93,18 +95,15 @@ export function GameBoard({
               animate={{ y: 0 }}
               className="text-center flex flex-col items-center"
             >
-              {/* Victory/Defeat Banner */}
               <img
                 src={myRole === winner ? "/sprites/ui/banner-victory.png" : "/sprites/ui/banner-defeat.png"}
                 alt={myRole === winner ? "Victory!" : "Defeat"}
                 className="w-96 h-auto mb-8"
                 style={{ imageRendering: 'pixelated' }}
               />
-              
               <p className="text-xl font-bold text-[#8D6E63] mb-8 uppercase">
                 Chef {winner} wins the round!
               </p>
-              
               {myRole === 1 && (
                 <button
                   onClick={() => onUpdateConfig('is_started', false)}
@@ -116,9 +115,7 @@ export function GameBoard({
             </motion.div>
           ) : (
             <div className="relative flex flex-col items-center w-full max-w-4xl">
-              
               <div className="flex justify-between items-center w-full px-12 mb-12">
-                {/* p1 */}
                 <AnimatedCharacter
                   character={players[0].character || 'seal'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
@@ -133,13 +130,11 @@ export function GameBoard({
                       {prompt}
                     </h1>
                   </div>
-                  
                   <div className="bg-[#5D4037] text-white px-8 py-4 rounded-full font-black text-3xl border-4 border-white shadow-xl">
                     ⏱️ {timer}s
                   </div>
                 </div>
 
-                {/* p2 */}
                 <AnimatedCharacter
                   character={players[1].character || 'capybara'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
@@ -183,6 +178,11 @@ export function GameBoard({
           ))}
         </AnimatePresence>
       </div>
+
+      {/* RENDER CELEBRATION HERE */}
+      <AnimatePresence>
+        {valentineSuccess && <ValentineCelebration />}
+      </AnimatePresence>
 
       <AnimatePresence>
         {(!presence.p1 || !presence.p2) && (

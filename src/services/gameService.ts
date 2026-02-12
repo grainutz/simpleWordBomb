@@ -107,6 +107,8 @@ export const gameService = {
     
     if (isValidWord(cleanInput, prompt) && !usedWords.includes(cleanInput)) {
       const nextTurn = turn === 1 ? 2 : 1;
+
+      const isValentineSuccess = gameConfig.valentineMode && turn === 2 && prompt === 'YE';
       
       // Fetch current round count for Valentine mode
       const { data } = await supabase
@@ -127,6 +129,7 @@ export const gameService = {
         current_turn: nextTurn,
         used_words: [cleanInput, ...usedWords],
         current_timer_value: gameConfig.duration,
+        valentine_success: isValentineSuccess,
         valentine_round_count: nextTurn === 1 ? (data?.valentine_round_count || 0) + 1 : (data?.valentine_round_count || 0)
       }).eq('id', roomId);
 
