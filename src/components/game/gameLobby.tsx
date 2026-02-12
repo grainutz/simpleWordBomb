@@ -68,6 +68,36 @@ export function GameLobby({
             />
           </div>
 
+          {/* Valentine Mode Toggle */}
+          {myRole === 1 && (
+          <div className="flex items-center justify-between p-4 bg-pink-50 rounded-xl border-2 border-pink-200">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">💝</span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-pink-600">
+                  Valentine Mode
+                </p>
+                <p className="text-[10px] text-pink-400 font-bold">
+                  Special romantic prompts 💕
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onUpdateConfig('valentine_mode', !gameConfig.valentineMode)}
+              disabled={myRole !== 1}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                gameConfig.valentineMode ? 'bg-pink-500' : 'bg-gray-300'
+              } ${myRole !== 1 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+              <div
+                className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${
+                  gameConfig.valentineMode ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-xs text-[#8D6E63] font-black uppercase tracking-widest">
               Heat Timer: {gameConfig.duration}s
