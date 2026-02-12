@@ -1,4 +1,3 @@
-// 'use client';
 
 import { WORDS } from './wordList';
 
@@ -11,7 +10,7 @@ const playableWords = WORDS.filter(word => {
   if (upper.length < 4 || upper.length > 15) return false;
   
   // take out words with rare consecutive consonants
-  const rarePatterns = /[BCDFGHJKLMNPQRSTVWXYZ]{4,}|XQ|QZ|XZ|BPM|XIM/i;
+  const rarePatterns = /[BCDFGHJKLMNPQRSTVWXYZ]{4,}|ELY|XQ|QZ|XZ|BPM|XIM/i;
   if (rarePatterns.test(word)) return false;
   
   return true;
