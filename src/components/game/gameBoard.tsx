@@ -17,7 +17,6 @@ type GameBoardProps = {
   isPaused: boolean;
   isGameOver: boolean;
   winner: number;
-  valentineSuccess: boolean; // NEW PROP TYPE
   maxLives: number;
   gameConfig: { duration: number };
   presence: { p1: boolean; p2: boolean };
@@ -27,7 +26,7 @@ type GameBoardProps = {
   onUpdateConfig: (key: string, value: any) => void;
 };
 
-// Helper function to determine potato burn level (0-3)
+// helper potato burn indicator
 function getPotatoSprite(timer: number, duration: number): number {
   const percentage = (timer / duration) * 100;
   if (percentage > 66) return 0; // Fresh
@@ -48,7 +47,6 @@ export function GameBoard({
   isPaused,
   isGameOver,
   winner,
-  valentineSuccess, // DESTRUCTURE NEW PROP
   maxLives,
   gameConfig,
   presence,
@@ -88,12 +86,18 @@ export function GameBoard({
             <motion.div
               initial={{ y: -500 }}
               animate={{ y: 0 }}
-              className="text-center bg-white p-12 rounded-[40px] shadow-2xl border-8 border-[#5D4037]"
+              className="text-center flex flex-col items-center"
             >
-              <h2 className="text-6xl font-black mb-4 uppercase italic">MASHED!</h2>
+              <img
+                src={myRole === winner ? "/sprites/ui/banner-victory.png" : "/sprites/ui/banner-defeat.png"}
+                alt={myRole === winner ? "Victory!" : "Defeat"}
+                className="w-96 h-auto mb-8"
+                style={{ imageRendering: 'pixelated' }}
+              />
               <p className="text-xl font-bold text-[#8D6E63] mb-8 uppercase">
                 Chef {winner} wins the round!
               </p>
+              
               {myRole === 1 && (
                 <button
                   onClick={() => onUpdateConfig('is_started', false)}
@@ -105,9 +109,9 @@ export function GameBoard({
             </motion.div>
           ) : (
             <div className="relative flex flex-col items-center w-full max-w-4xl">
-              {/* Characters with potato */}
+              
               <div className="flex justify-between items-center w-full px-12 mb-12">
-                {/* Player 1 */}
+                {/* p1 */}
                 <AnimatedCharacter
                   character={players[0].character || 'seal'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
@@ -123,12 +127,13 @@ export function GameBoard({
                       {prompt}
                     </h1>
                   </div>
+                  
                   <div className="bg-[#5D4037] text-white px-8 py-4 rounded-full font-black text-3xl border-4 border-white shadow-xl">
                     ⏱️ {timer}s
                   </div>
                 </div>
 
-                {/* Player 2 */}
+                {/* p2 */}
                 <AnimatedCharacter
                   character={players[1].character || 'capybara'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}

@@ -23,8 +23,6 @@ export default function GameRoom() {
     presence,
     isGameOver,
     winner,
-    valentineSuccess, // Extracted from your hook
-
     handleInputChange,
     handleSubmit,
     togglePause,
@@ -33,6 +31,7 @@ export default function GameRoom() {
     startGame,
   } = useGameRoom(roomId as string, myRole);
 
+  // role selection
   if (!myRole) {
     return (
       <div className="min-h-screen bg-[#FFF8E1] flex flex-col items-center justify-center gap-8">
@@ -64,6 +63,7 @@ export default function GameRoom() {
     );
   }
 
+  // lobby
   if (!gameConfig.isStarted) {
     return (
       <GameLobby
@@ -79,6 +79,7 @@ export default function GameRoom() {
     );
   }
 
+  // game screen
   return (
     <GameBoard
       myRole={myRole}
@@ -92,7 +93,6 @@ export default function GameRoom() {
       isPaused={isPaused}
       isGameOver={isGameOver}
       winner={winner}
-      valentineSuccess={valentineSuccess} // NEW PROP
       maxLives={gameConfig.maxLives}
       gameConfig={{ duration: gameConfig.duration }}
       presence={presence}

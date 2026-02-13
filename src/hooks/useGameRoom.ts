@@ -21,7 +21,6 @@ export type Player = {
 };
 
 export function useGameRoom(roomId: string, myRole: number | null) {
-  const [valentineSuccess, setValentineSuccess] = useState(false);
   const [input, setInput] = useState("");
   const [prompt, setPrompt] = useState("");
   const [turn, setTurn] = useState(1);
@@ -69,15 +68,13 @@ export function useGameRoom(roomId: string, myRole: number | null) {
       { id: 2, lives: data.p2_lives, character: data.p2_character }
     ]);
     setIsPaused(data.is_paused);
-
-    setValentineSuccess(data.valentine_success || false);
     
     setGameConfig({
       maxLives: data.max_lives,
       duration: data.bomb_duration,
       difficulty: data.difficulty,
       isStarted: data.is_started,
-      valentineMode: data.valentine_mode || false,
+      valentineMode: data.valentine_mode || false
     });
 
     if (data.current_timer_value !== null && data.current_timer_value !== undefined) {
@@ -159,7 +156,6 @@ export function useGameRoom(roomId: string, myRole: number | null) {
     presence,
     isGameOver,
     winner,
-    valentineSuccess,
 
     // Actions
     handleInputChange,
