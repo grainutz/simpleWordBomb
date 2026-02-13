@@ -31,7 +31,7 @@ export default function GameRoom() {
     startGame,
   } = useGameRoom(roomId as string, myRole);
 
-  // role selection
+  // Role selection screen
   if (!myRole) {
     return (
       <div className="min-h-screen bg-[#FFF8E1] flex flex-col items-center justify-center gap-8">
@@ -63,7 +63,7 @@ export default function GameRoom() {
     );
   }
 
-  // lobby
+  // Lobby screen
   if (!gameConfig.isStarted) {
     return (
       <GameLobby
@@ -79,7 +79,7 @@ export default function GameRoom() {
     );
   }
 
-  // game screen
+  // Active game screen
   return (
     <GameBoard
       myRole={myRole}
