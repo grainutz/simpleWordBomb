@@ -27,7 +27,7 @@ type GameBoardProps = {
   onUpdateConfig: (key: string, value: any) => void;
 };
 
-// helper potato burn indicator
+// Helper function to determine potato burn level (0-3)
 function getPotatoSprite(timer: number, duration: number): number {
   const percentage = (timer / duration) * 100;
   if (percentage > 66) return 0; // Fresh
@@ -88,16 +88,9 @@ export function GameBoard({
             <motion.div
               initial={{ y: -500 }}
               animate={{ y: 0 }}
-              className="text-center flex flex-col items-center"
+              className="text-center bg-white p-12 rounded-[40px] shadow-2xl border-8 border-[#5D4037]"
             >
-              {/* Victory/Defeat Banner */}
-              <img
-                src={myRole === winner ? "/sprites/ui/banner-victory.png" : "/sprites/ui/banner-defeat.png"}
-                alt={myRole === winner ? "Victory!" : "Defeat"}
-                className="w-96 h-auto mb-8"
-                style={{ imageRendering: 'pixelated' }}
-              />
-              
+              <h2 className="text-6xl font-black mb-4 uppercase italic">MASHED!</h2>
               <p className="text-xl font-bold text-[#8D6E63] mb-8 uppercase">
                 Chef {winner} wins the round!
               </p>
@@ -112,9 +105,9 @@ export function GameBoard({
             </motion.div>
           ) : (
             <div className="relative flex flex-col items-center w-full max-w-4xl">
-              
+              {/* Characters with potato */}
               <div className="flex justify-between items-center w-full px-12 mb-12">
-                {/* p1 */}
+                {/* Player 1 */}
                 <AnimatedCharacter
                   character={players[0].character || 'seal'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
@@ -135,7 +128,7 @@ export function GameBoard({
                   </div>
                 </div>
 
-                {/* p2 */}
+                {/* Player 2 */}
                 <AnimatedCharacter
                   character={players[1].character || 'capybara'}
                   potatoSprite={getPotatoSprite(timer, gameConfig.duration)}
