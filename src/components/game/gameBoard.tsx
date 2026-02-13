@@ -74,9 +74,14 @@ export function GameBoard({
       {!isGameOver && myRole === 1 && (
         <button
           onClick={onTogglePause}
-          className="fixed top-8 right-8 w-14 h-14 bg-white border-4 border-[#5D4037] rounded-full flex items-center justify-center text-2xl shadow-[0_4px_0_#5D4037] active:translate-y-1 active:shadow-none z-40"
+          className="fixed top-8 right-8 z-40 group"
         >
-          {isPaused ? "▶️" : "⏸️"}
+          <img
+            src={isPaused ? "/sprites/ui/icon-play.png" : "/sprites/ui/icon-pause.png"}
+            alt={isPaused ? "Resume" : "Pause"}
+            className="w-14 h-14 group-hover:scale-110 group-active:scale-95 transition-transform"
+            style={{ imageRendering: 'pixelated' }}
+          />
         </button>
       )}
 

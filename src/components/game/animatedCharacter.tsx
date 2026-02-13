@@ -100,20 +100,6 @@ export function AnimatedCharacter({
           </motion.div>
         )}
       </motion.div>
-
-      {/* Character name and lives */}
-      <div className={`mt-2 flex flex-col ${position === 'right' ? 'items-end' : 'items-start'}`}>
-        <p className="font-black text-xs uppercase tracking-wider text-[#5D4037]">
-          {character}
-        </p>
-        <div className="flex gap-1 mt-1">
-          {[...Array(lives)].map((_, i) => (
-            <span key={i} className="text-sm">
-              ❤️
-            </span>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
