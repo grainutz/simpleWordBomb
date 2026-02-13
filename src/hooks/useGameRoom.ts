@@ -11,7 +11,6 @@ export type GameConfig = {
   duration: number;
   difficulty: 'easy' | 'medium' | 'hard';
   isStarted: boolean;
-  valentineMode: boolean;
 };
 
 export type Player = {
@@ -35,8 +34,7 @@ export function useGameRoom(roomId: string, myRole: number | null) {
     maxLives: 3,
     duration: 10,
     difficulty: 'medium',
-    isStarted: false,
-    valentineMode: false
+    isStarted: false
   });
 
   const { remoteInput, presence, sendTyping, channelRef } = useRealtimeSync(
@@ -73,8 +71,7 @@ export function useGameRoom(roomId: string, myRole: number | null) {
       maxLives: data.max_lives,
       duration: data.bomb_duration,
       difficulty: data.difficulty,
-      isStarted: data.is_started,
-      valentineMode: data.valentine_mode || false
+      isStarted: data.is_started
     });
 
     if (data.current_timer_value !== null && data.current_timer_value !== undefined) {
@@ -142,7 +139,7 @@ export function useGameRoom(roomId: string, myRole: number | null) {
   const winner = players[0].lives > 0 ? 1 : 2;
 
   return {
-    // State
+    // state
     input,
     prompt,
     timer,
@@ -157,7 +154,7 @@ export function useGameRoom(roomId: string, myRole: number | null) {
     isGameOver,
     winner,
 
-    // Actions
+    // action
     handleInputChange,
     handleSubmit,
     togglePause,
