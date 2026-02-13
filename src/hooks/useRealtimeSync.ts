@@ -13,12 +13,12 @@ export function useRealtimeSync(
 ) {
   const [remoteInput, setRemoteInput] = useState("");
   const [presence, setPresence] = useState<Presence>({ p1: false, p2: false });
-  
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
     if (!roomId) return;
 
+    // Fetch initial state
     const fetchInitial = async () => {
       const { data } = await supabase
         .from('rooms')
@@ -30,12 +30,14 @@ export function useRealtimeSync(
     };
     fetchInitial();
 
+    // Setup realtime channel
     const channel = supabase.channel(`room:${roomId}`, {
       config: { presence: { key: myRole?.toString() || 'spectator' } }
     });
     channelRef.current = channel;
 
     channel
+      // Listen for database changes
       .on(
         'postgres_changes',
         {
@@ -46,15 +48,17 @@ export function useRealtimeSync(
         },
         (payload) => onSync(payload.new)
       )
-      // typing event listener
+      // Listen for typing events
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.role !== myRole) {
           setRemoteInput(payload.text);
         }
       })
-      // timer sync listener
+      // Listen for timer sync
       .on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
+        // Timer sync is handled in useGameTimer via the parent hook
       })
+      // Track presence
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         setPresence({

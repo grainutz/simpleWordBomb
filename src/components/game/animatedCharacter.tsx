@@ -19,7 +19,7 @@ export function AnimatedCharacter({
 }: AnimatedCharacterProps) {
   const [idleFrame, setIdleFrame] = useState(0);
 
-  // idle animation loop
+  // Idle animation cycle
   useEffect(() => {
     const interval = setInterval(() => {
       setIdleFrame((prev) => (prev + 1) % 2); // 2 frames for idle
@@ -29,7 +29,7 @@ export function AnimatedCharacter({
 
   return (
     <div className={`relative flex flex-col items-center ${position === 'left' ? 'items-start' : 'items-end'}`}>
-      
+      {/* Potato on head when active */}
       {isActive && (
         <motion.div
           initial={{ y: -100, opacity: 0 }}
@@ -43,6 +43,7 @@ export function AnimatedCharacter({
             transform: 'translateX(-50%)'
           }}
         >
+          {/* Potato sprite - replace with your actual sprite */}
           <div className="relative">
             <img
               src={`/sprites/potato-${potatoSprite}.png`}
@@ -52,6 +53,7 @@ export function AnimatedCharacter({
                 imageRendering: 'pixelated',
               }}
             />
+            {/* Add shake effect when potato is burning */}
             {potatoSprite >= 2 && (
               <motion.div
                 animate={{ rotate: [-5, 5, -5, 5, 0] }}
@@ -63,9 +65,10 @@ export function AnimatedCharacter({
         </motion.div>
       )}
 
+      {/* Character sprite */}
       <motion.div
         animate={{
-          y: isActive ? [0, -4, 0] : [0, -2, 0], 
+          y: isActive ? [0, -4, 0] : [0, -2, 0], // Bounce more when holding potato
           scale: isActive ? 1.1 : 1
         }}
         transition={{
@@ -86,6 +89,7 @@ export function AnimatedCharacter({
           }}
         />
         
+        {/* Panic effect when timer is low */}
         {isActive && potatoSprite >= 3 && (
           <motion.div
             animate={{ opacity: [0, 1, 0] }}
@@ -96,6 +100,20 @@ export function AnimatedCharacter({
           </motion.div>
         )}
       </motion.div>
+
+      {/* Character name and lives */}
+      <div className={`mt-2 flex flex-col ${position === 'right' ? 'items-end' : 'items-start'}`}>
+        <p className="font-black text-xs uppercase tracking-wider text-[#5D4037]">
+          {character}
+        </p>
+        <div className="flex gap-1 mt-1">
+          {[...Array(lives)].map((_, i) => (
+            <span key={i} className="text-sm">
+              ❤️
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
