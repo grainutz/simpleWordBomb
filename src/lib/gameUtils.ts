@@ -21,7 +21,7 @@ const playableSet = new Set(playableWords.map(w => w.toUpperCase()));
 export const isValidWord = (word: string, prompt: string): boolean => {
   const upperWord = word.toUpperCase().trim();
   return (
-    upperWord.length > 1 &&
+    upperWord.length > 2 &&
     upperWord.includes(prompt.toUpperCase()) &&
     dictionarySet.has(upperWord) 
   );
